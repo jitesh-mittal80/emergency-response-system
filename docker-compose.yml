@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: emergency_dispatch_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-dispatch_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dispatch_pass}
+      POSTGRES_DB: ${DB_NAME:-emergency_dispatch}
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-dispatch_user} -d ${DB_NAME:-emergency_dispatch}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

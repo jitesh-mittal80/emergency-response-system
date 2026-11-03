@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AmbulanceStatus {
+  AVAILABLE
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  OFFLINE
+}
+
+enum EmergencyStatus {
+  PENDING
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  COMPLETED
+  WAITING_FOR_AMBULANCE
+  CANCELLED
+  FAILED
+}
+
+enum EmergencyPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EmergencyType {
+  CARDIAC_ARREST
+  ACCIDENT
+  STROKE
+  RESPIRATORY
+  TRAUMA
+  BURNS
+  POISONING
+  MATERNITY
+  OTHER
+}
+
+enum DispatchStatus {
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  COMPLETED
+  CANCELLED
+}
+
+enum AlgorithmType {
+  ASTAR
+  DIJKSTRA
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+}
+
+model Admin {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("admins")
+}
+
+model Ambulance {
+  id                   String          @id @default(uuid())
+  name                 String
+  vehicleNumber        String          @unique
+  latitude             Float
+  longitude            Float
+  status               AmbulanceStatus @default(AVAILABLE)
+  assignedEmergencyId  String?
+  currentRoute         Json?           // Array of {lat, lng}
+  lastLocationUpdate   DateTime        @default(now())
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  dispatches           Dispatch[]
+  locationHistory      AmbulanceLocationHistory[]
+
+  @@index([status])
+  @@map("ambulances")
+}
+
+model Patient {
+  id              String          @id @default(uuid())
+  name            String
+  phoneNumber     String
+  locationName    String
+  latitude        Float
+  longitude       Float
+  emergencyType   EmergencyType   @default(OTHER)
+  emergencyPriority EmergencyPriority @default(HIGH)
+  createdAt       DateTime        @default(now())
+
+  emergencies     EmergencyRequest[]
+
+  @@map("patients")
+}
+
+model EmergencyRequest {
+  id            String          @id @default(uuid())
+  patientId     String
+  patient       Patient         @relation(fields: [patientId], references: [id])
+  emergencyType EmergencyType
+  priority      EmergencyPriority
+  latitude      Float
+  longitude     Float
+  status        EmergencyStatus @default(PENDING)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  dispatch      Dispatch?
+  algorithmExecutions AlgorithmExecution[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("emergency_requests")
+}
+
+model Dispatch {
+  id                  String         @id @default(uuid())
+  emergencyId         String         @unique
+  emergency           EmergencyRequest @relation(fields: [emergencyId], references: [id])
+  ambulanceId         String
+  ambulance           Ambulance      @relation(fields: [ambulanceId], references: [id])
+  distanceKm          Float
+  initialEtaMinutes   Float
+  currentEtaMinutes   Float
+  route               Json?          // Array of {lat, lng}
+  status              DispatchStatus @default(ASSIGNED)
+  assignedAt          DateTime       @default(now())
+  arrivedAt           DateTime?
+  completedAt         DateTime?
+
+  @@index([ambulanceId])
+  @@index([status])
+  @@map("dispatches")
+}
+
+model AmbulanceLocationHistory {
+  id          String    @id @default(uuid())
+  ambulanceId String
+  ambulance   Ambulance @relation(fields: [ambulanceId], references: [id])
+  latitude    Float
+  longitude   Float
+  recordedAt  DateTime  @default(now())
+
+  @@index([ambulanceId, recordedAt])
+  @@map("ambulance_location_history")
+}
+
+model AlgorithmExecution {
+  id              String        @id @default(uuid())
+  emergencyId     String
+  emergency       EmergencyRequest @relation(fields: [emergencyId], references: [id])
+  algorithm       AlgorithmType
+  executionTimeMs Float
+  exploredNodes   Int
+  pathDistance    Float
+  pathCost        Float
+  pathJson        Json?         // Array of node IDs
+  createdAt       DateTime      @default(now())
+
+  @@index([emergencyId])
+  @@map("algorithm_executions")
+}

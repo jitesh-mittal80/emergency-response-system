@@ -1,0 +1,73 @@
+====================================================================
+API KEY INSTRUCTIONS — Emergency Ambulance Dispatch System
+====================================================================
+
+This file lists every API key and secret required by the project.
+Search the codebase for "API_HERE" to find every insertion point.
+
+--------------------------------------------------------------------
+1. JWT_SECRET
+--------------------------------------------------------------------
+Environment Variable : JWT_SECRET
+File Path            : .env  (copy from .env.example)
+Service / Provider   : None — generate yourself
+How to obtain        : Run: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+                       Copy the output as your JWT_SECRET value.
+Required?            : YES — the backend will not start without it.
+Notes                : Keep this value secret. Never commit it to Git.
+
+--------------------------------------------------------------------
+2. GOOGLE_MAPS_API_KEY  (server-side / backend)
+--------------------------------------------------------------------
+Environment Variable : GOOGLE_MAPS_API_KEY
+File Path            : .env  (copy from .env.example)
+                       backend/src/modules/routing/googleRoutes.ts  — reads process.env.GOOGLE_MAPS_API_KEY
+Service / Provider   : Google Cloud — Routes API (and optionally Geocoding API)
+How to obtain        :
+  1. Go to https://console.cloud.google.com/
+  2. Create or select a project.
+  3. Enable "Routes API" (and optionally "Geocoding API").
+  4. Go to APIs & Services → Credentials → Create Credentials → API Key.
+  5. Restrict the key: Application restrictions → IP addresses → your server IP.
+     Allowed APIs: Routes API, Geocoding API.
+  6. Paste the key as GOOGLE_MAPS_API_KEY in your .env file.
+Required?            : NO — set MOCK_ROUTING=true in .env to run without it.
+                       When MOCK_ROUTING=true the system uses straight-line
+                       distance simulation and clearly labels all ETAs as
+                       "Simulated (Mock Mode)".
+Notes                : This is a SERVER-SIDE key. Never expose it to the browser.
+
+--------------------------------------------------------------------
+3. VITE_GOOGLE_MAPS_API_KEY  (frontend / browser key)
+--------------------------------------------------------------------
+Environment Variable : VITE_GOOGLE_MAPS_API_KEY
+File Path            : .env  (copy from .env.example)
+                       frontend/src/maps/GoogleMap.tsx — uses import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+Service / Provider   : Google Cloud — Maps JavaScript API
+How to obtain        :
+  1. Go to https://console.cloud.google.com/
+  2. Enable "Maps JavaScript API".
+  3. Create a separate API key (do NOT reuse the server key).
+  4. Restrict the key:
+       Application restrictions → HTTP referrers → http://localhost:5173/*
+       (add your production domain when deploying)
+       Allowed APIs: Maps JavaScript API only.
+  5. Paste the key as VITE_GOOGLE_MAPS_API_KEY in your .env file.
+Required?            : NO — when VITE_GOOGLE_MAPS_API_KEY is absent or empty,
+                       the frontend automatically falls back to a plain
+                       Leaflet/OpenStreetMap map labelled "Demo Map (No API Key)".
+Notes                : This key IS visible in the browser bundle. The HTTP
+                       referrer restriction above is essential to prevent misuse.
+
+====================================================================
+QUICK START WITHOUT ANY API KEYS
+====================================================================
+1. Copy .env.example to .env
+2. Generate a JWT secret:
+     node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+   Paste the result as JWT_SECRET in .env.
+3. Leave MOCK_ROUTING=true (already the default).
+4. Leave VITE_GOOGLE_MAPS_API_KEY empty — the app uses Leaflet/OSM.
+5. Follow README.md to start Docker, run migrations, seed, and launch.
+
+====================================================================
