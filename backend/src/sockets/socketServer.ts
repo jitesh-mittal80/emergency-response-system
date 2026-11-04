@@ -50,6 +50,7 @@ export const SocketEvents = {
   EMERGENCY_NEW: 'emergency:new-request',
   EMERGENCY_STATUS_UPDATE: 'emergency:status-update',
   DISPATCH_ASSIGNED: 'dispatch:assigned',
+  DISPATCH_STATUS_UPDATE: 'dispatch:status-update',
   DISPATCH_ETA_UPDATE: 'dispatch:eta-update',
   DISPATCH_COMPLETED: 'dispatch:completed',
   SIMULATION_STATUS: 'simulation:status',

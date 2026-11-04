@@ -70,7 +70,6 @@ export async function getResponseTimes(_req: AuthRequest, res: Response, next: N
       patientName: d.emergency.patient.name,
       locationName: d.emergency.patient.locationName,
       emergencyType: d.emergency.emergencyType,
-      priority: d.emergency.priority,
       assignedAt: d.assignedAt,
       arrivedAt: d.arrivedAt,
       responseTimeMinutes: d.arrivedAt

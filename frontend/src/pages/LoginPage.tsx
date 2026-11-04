@@ -71,10 +71,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <p className="text-xs text-gray-500 text-center mt-6">
-            Academic simulation prototype — not a real emergency service
-          </p>
         </div>
 
         <p className="text-xs text-gray-600 text-center mt-4">

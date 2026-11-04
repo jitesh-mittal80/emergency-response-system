@@ -106,12 +106,8 @@ export default function SettingsPage() {
           <InfoRow label="Algorithms" value="A* Search & Dijkstra's Shortest Path" />
           <InfoRow label="Routing Mode" value={import.meta.env.VITE_MOCK_ROUTING !== 'false' ? 'Mock (Simulated)' : 'Google Routes API'} />
           <InfoRow label="Map Provider" value="OpenStreetMap (Leaflet)" />
-          <InfoRow label="Version" value="1.0.0 — Academic Prototype" />
+          <InfoRow label="Version" value="1.0.0" />
         </div>
-        <p className="text-xs text-gray-500 mt-4 pt-3 border-t border-dispatch-border">
-          ⚠️ This is an academic simulation prototype and is NOT a real emergency dispatch service.
-          Do not use for actual emergencies. Call 112 for real emergencies.
-        </p>
       </div>
     </div>
   );

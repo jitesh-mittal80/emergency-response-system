@@ -5,13 +5,6 @@ import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { Patient, EmergencyRequest } from '../types';
 
-const priorityColors: Record<string, string> = {
-  CRITICAL: 'text-red-400',
-  HIGH:     'text-orange-400',
-  MEDIUM:   'text-yellow-400',
-  LOW:      'text-gray-400',
-};
-
 export default function EmergencyPage() {
   const { emergencies, refresh } = useDispatch();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -110,12 +103,6 @@ export default function EmergencyPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Emergency</span>
                   <span className="text-white">{selectedPatientData.emergencyType?.replace(/_/g, ' ')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Priority</span>
-                  <span className={`font-semibold ${priorityColors[selectedPatientData.emergencyPriority]}`}>
-                    {selectedPatientData.emergencyPriority}
-                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Phone</span>
@@ -232,9 +219,6 @@ export default function EmergencyPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="font-medium text-sm text-white">{e.patient?.name}</span>
-                          <span className={`text-xs font-semibold ${priorityColors[e.priority]}`}>
-                            {e.priority}
-                          </span>
                         </div>
                         <div className="text-xs text-gray-400">{e.patient?.locationName}</div>
                         <div className="text-xs text-gray-500 mt-0.5">

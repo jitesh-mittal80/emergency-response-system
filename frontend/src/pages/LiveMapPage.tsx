@@ -41,8 +41,7 @@ export default function LiveMapPage() {
               <LegendItem color="#EA580C" icon="🚑" label="Assigned Ambulance" />
               <LegendItem color="#1D4ED8" icon="🚑" label="En Route" />
               <LegendItem color="#7C3AED" icon="🚑" label="On Scene" />
-              <LegendItem color="#DC2626" icon="🆘" label="Emergency (Critical)" />
-              <LegendItem color="#EA580C" icon="🆘" label="Emergency (High)" />
+              <LegendItem color="#EF4444" icon="🆘" label="Emergency" />
               <div className="flex items-center gap-2 pt-1">
                 <div className="w-8 border-t-2 border-blue-500 border-dashed" />
                 <span className="text-gray-400">Active Route</span>

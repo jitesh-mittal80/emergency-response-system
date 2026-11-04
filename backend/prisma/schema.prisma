@@ -26,13 +26,6 @@ enum EmergencyStatus {
   FAILED
 }
 
-enum EmergencyPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
 enum EmergencyType {
   CARDIAC_ARREST
   ACCIDENT
@@ -104,7 +97,6 @@ model Patient {
   latitude        Float
   longitude       Float
   emergencyType   EmergencyType   @default(OTHER)
-  emergencyPriority EmergencyPriority @default(HIGH)
   createdAt       DateTime        @default(now())
 
   emergencies     EmergencyRequest[]
@@ -117,7 +109,6 @@ model EmergencyRequest {
   patientId     String
   patient       Patient         @relation(fields: [patientId], references: [id])
   emergencyType EmergencyType
-  priority      EmergencyPriority
   latitude      Float
   longitude     Float
   status        EmergencyStatus @default(PENDING)

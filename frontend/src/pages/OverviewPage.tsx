@@ -123,7 +123,6 @@ export default function OverviewPage() {
                       <div className="text-xs text-gray-400">{e.patient?.locationName}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <PriorityBadge priority={e.priority} />
                       <StatusBadge status={e.status} />
                     </div>
                   </div>
@@ -158,19 +157,5 @@ export default function OverviewPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: string }) {
-  const cfg: Record<string, string> = {
-    CRITICAL: 'bg-red-900/60 text-red-300 border-red-700',
-    HIGH:     'bg-orange-900/60 text-orange-300 border-orange-700',
-    MEDIUM:   'bg-yellow-900/60 text-yellow-300 border-yellow-700',
-    LOW:      'bg-gray-800 text-gray-400 border-gray-700',
-  };
-  return (
-    <span className={`status-badge ${cfg[priority] || cfg['LOW']}`}>
-      {priority}
-    </span>
   );
 }

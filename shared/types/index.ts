@@ -12,8 +12,6 @@ export type EmergencyStatus =
   | 'CANCELLED'
   | 'FAILED';
 
-export type EmergencyPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-
 export type EmergencyType =
   | 'CARDIAC_ARREST'
   | 'ACCIDENT'
@@ -64,7 +62,6 @@ export interface Patient {
   latitude: number;
   longitude: number;
   emergencyType: EmergencyType;
-  emergencyPriority: EmergencyPriority;
 }
 
 // ---- Emergency Request ----
@@ -73,7 +70,6 @@ export interface EmergencyRequest {
   patientId: string;
   patient: Patient;
   emergencyType: EmergencyType;
-  priority: EmergencyPriority;
   latitude: number;
   longitude: number;
   status: EmergencyStatus;
@@ -194,6 +190,11 @@ export interface SocketDispatchEtaUpdate {
   dispatchId: string;
   currentEtaMinutes: number;
   remainingDistanceKm: number;
+}
+
+export interface SocketDispatchStatusUpdate {
+  dispatchId: string;
+  status: DispatchStatus;
 }
 
 export interface SocketDispatchCompleted {

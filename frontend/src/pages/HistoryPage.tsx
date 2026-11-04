@@ -11,7 +11,7 @@ interface HistoryRecord {
   arrivedAt?: string | null;
   completedAt: string | null;
   ambulance?: { name: string; vehicleNumber: string };
-  emergency?: { emergencyType: string; priority: string; patient?: { name: string; locationName: string } };
+  emergency?: { emergencyType: string; patient?: { name: string; locationName: string } };
 }
 
 export default function HistoryPage() {
@@ -64,7 +64,6 @@ export default function HistoryPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-gray-300 text-xs">{r.emergency?.emergencyType?.replace('_', ' ')}</div>
-                      <div className="text-xs text-gray-500">{r.emergency?.priority}</div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-gray-300">{r.ambulance?.name || '—'}</div>

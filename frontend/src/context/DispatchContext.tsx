@@ -131,6 +131,16 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       );
     };
 
+    const onDispatchStatus = (data: any) => {
+      setActiveDispatches((prev) =>
+        prev.map((d) =>
+          d.id === data.dispatchId
+            ? { ...d, status: data.status }
+            : d
+        )
+      );
+    };
+
     const onDispatchCompleted = (data: any) => {
       setActiveDispatches((prev) => prev.filter((d) => d.id !== data.dispatchId));
       // Refresh to get latest completed state
@@ -142,6 +152,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
     socket.on('emergency:new-request', onEmergencyNew);
     socket.on('emergency:status-update', onEmergencyStatus);
     socket.on('dispatch:assigned', onDispatchAssigned);
+    socket.on('dispatch:status-update', onDispatchStatus);
     socket.on('dispatch:eta-update', onDispatchEta);
     socket.on('dispatch:completed', onDispatchCompleted);
 
@@ -151,6 +162,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       socket.off('emergency:new-request', onEmergencyNew);
       socket.off('emergency:status-update', onEmergencyStatus);
       socket.off('dispatch:assigned', onDispatchAssigned);
+      socket.off('dispatch:status-update', onDispatchStatus);
       socket.off('dispatch:eta-update', onDispatchEta);
       socket.off('dispatch:completed', onDispatchCompleted);
     };

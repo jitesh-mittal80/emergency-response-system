@@ -1,8 +1,6 @@
 # 🚑 AI-Powered Emergency Ambulance Dispatch System
 
-An academic prototype of a full-stack emergency ambulance dispatch system featuring A\* Search and Dijkstra's Algorithm, real-time tracking, and an intelligent dispatch engine.
-
-> **⚠️ Academic Simulation Only** — This is NOT a real emergency service. Call 112 for actual emergencies.
+Full-stack emergency ambulance dispatch system featuring A\* Search and Dijkstra's Algorithm, real-time tracking, and an intelligent dispatch engine.
 
 ---
 
@@ -294,5 +292,3 @@ Set `MOCK_ROUTING=false` in `.env` after adding the server key.
 ---
 
 ## License
-
-Academic prototype. All patient data is fictional.

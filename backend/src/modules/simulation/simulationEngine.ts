@@ -27,6 +27,8 @@ interface AmbulanceState {
   targetLng?: number;
   /** prevent repeated ON_SCENE fires */
   arrivedAtScene: boolean;
+  /** becomes true as soon as a dispatched ambulance changes position */
+  hasMoved: boolean;
   /** prevents overlapping road-route requests when a route ends */
   isRouting?: boolean;
 }
@@ -62,41 +64,64 @@ export class SimulationEngine {
     if (this.running) return;
     this.running = true;
 
-    const ambulances = await prisma.ambulance.findMany({
-      where: { status: { not: 'OFFLINE' } },
-    });
+    try {
+      const ambulances = await prisma.ambulance.findMany({
+        where: { status: { not: 'OFFLINE' } },
+      });
 
-    for (const amb of ambulances) {
-      if (amb.status === 'ASSIGNED' || amb.status === 'EN_ROUTE' || amb.status === 'ON_SCENE') {
-        // Reload the dispatch route from DB so we follow the right path after restart
-        const dispatch = await prisma.dispatch.findFirst({
-          where: { ambulanceId: amb.id, status: { in: ['ASSIGNED', 'EN_ROUTE', 'ON_SCENE'] } },
-          include: { emergency: true },
-        });
+      for (const amb of ambulances) {
+        if (amb.status === 'ASSIGNED' || amb.status === 'EN_ROUTE' || amb.status === 'ON_SCENE') {
+          // Reload the dispatch route from DB so we follow the right path after restart
+          const dispatch = await prisma.dispatch.findFirst({
+            where: { ambulanceId: amb.id, status: { in: ['ASSIGNED', 'EN_ROUTE', 'ON_SCENE'] } },
+            include: { emergency: true },
+          });
 
-        const routePoints = (amb.currentRoute as Array<{ lat: number; lng: number }>) || [];
-        this.states.set(amb.id, {
-          id: amb.id,
-          lat: amb.latitude,
-          lng: amb.longitude,
-          routePoints,
-          routeIndex: 0,
-          isDispatched: true,
-          targetLat: dispatch?.emergency.latitude,
-          targetLng: dispatch?.emergency.longitude,
-          arrivedAtScene: amb.status === 'ON_SCENE',
-        });
-      } else {
-        await this.initRoam(amb.id, amb.latitude, amb.longitude);
+          const ambulanceRoute = Array.isArray(amb.currentRoute)
+            ? amb.currentRoute as Array<{ lat: number; lng: number }>
+            : [];
+          const dispatchRoute = Array.isArray(dispatch?.route)
+            ? dispatch.route as Array<{ lat: number; lng: number }>
+            : [];
+          let routePoints = ambulanceRoute.length > 1 ? ambulanceRoute : dispatchRoute;
+
+          if (routePoints.length < 2 && dispatch) {
+            routePoints = (await getRoute(
+              amb.latitude,
+              amb.longitude,
+              dispatch.emergency.latitude,
+              dispatch.emergency.longitude
+            )).points;
+          }
+
+          this.states.set(amb.id, {
+            id: amb.id,
+            lat: amb.latitude,
+            lng: amb.longitude,
+            routePoints,
+            routeIndex: 0,
+            isDispatched: true,
+            targetLat: dispatch?.emergency.latitude,
+            targetLng: dispatch?.emergency.longitude,
+            arrivedAtScene: amb.status === 'ON_SCENE',
+            hasMoved: false,
+          });
+        } else {
+          await this.initRoam(amb.id, amb.latitude, amb.longitude);
+        }
       }
-    }
 
-    this.timer = setInterval(() => this.tick(), TICK_MS);
-    logger.info(`Simulation started — tick every ${TICK_MS}ms, speed ×${SPEED_MULTIPLIER}`);
+      this.timer = setInterval(() => this.tick(), TICK_MS);
+      logger.info(`Simulation started — tick every ${TICK_MS}ms, speed ×${SPEED_MULTIPLIER}`);
+    } catch (err) {
+      this.running = false;
+      throw err;
+    }
   }
 
   stop(): void {
     if (this.timer) clearInterval(this.timer);
+    this.timer = null;
     this.running = false;
     logger.info('Simulation stopped');
   }
@@ -130,6 +155,7 @@ export class SimulationEngine {
       targetLat,
       targetLng,
       arrivedAtScene: false,
+      hasMoved: false,
     });
 
     logger.info(`[Sim] Ambulance ${ambulanceId} now following dispatch route (${routePoints.length} waypoints)`);
@@ -171,6 +197,8 @@ export class SimulationEngine {
       if (state.routePoints.length === 0) continue;
       if (state.arrivedAtScene) continue; // don't move further after arriving
 
+      const previousLat = state.lat;
+      const previousLng = state.lng;
       if (state.isDispatched) {
         const atEnd = this.advanceAlongRoute(state);
         if (atEnd && state.targetLat !== undefined) {
@@ -183,6 +211,10 @@ export class SimulationEngine {
         if (atEnd) {
           await this.scheduleNewDestination(id, state.lat, state.lng);
         }
+      }
+
+      if (state.isDispatched && (state.lat !== previousLat || state.lng !== previousLng)) {
+        state.hasMoved = true;
       }
 
       updates.push({ id, lat: state.lat, lng: state.lng });
@@ -283,11 +315,13 @@ export class SimulationEngine {
     const dest = this.randomPoint();
     const route = await getRoute(lat, lng, dest.lat, dest.lng);
 
-    // A straight-line fallback would cut through buildings and parks.  Keep
-    // the ambulance stationary until a drivable route can be obtained instead.
-    if (route.isMock || route.points.length < 2) {
-      logger.warn(`[Sim] No drivable roaming route for ambulance ${ambulanceId}; it will remain stationary`);
+    if (route.points.length < 2) {
+      logger.warn(`[Sim] No usable roaming route for ambulance ${ambulanceId}`);
       return;
+    }
+
+    if (route.isMock) {
+      logger.warn(`[Sim] Using fallback roaming route for ambulance ${ambulanceId}`);
     }
 
     // OSRM/Google may snap the supplied origin to the nearest road.  Start the
@@ -301,6 +335,7 @@ export class SimulationEngine {
       routeIndex: 0,
       isDispatched: false,
       arrivedAtScene: false,
+      hasMoved: false,
     });
   }
 
@@ -313,13 +348,13 @@ export class SimulationEngine {
       const dest = this.randomPoint();
       const route = await getRoute(lat, lng, dest.lat, dest.lng);
 
-      // Do not use the straight-line fallback for idle roaming.  It would make
-      // the marker travel across non-drivable map features.
-      if (route.isMock || route.points.length < 2) {
-        state.routePoints = [];
-        state.routeIndex = 0;
-        logger.warn(`[Sim] No drivable next route for ambulance ${ambulanceId}; it will remain stationary`);
+      if (route.points.length < 2) {
+        logger.warn(`[Sim] No usable next route for ambulance ${ambulanceId}`);
         return;
+      }
+
+      if (route.isMock) {
+        logger.warn(`[Sim] Using fallback roaming route for ambulance ${ambulanceId}`);
       }
 
       state.lat = route.points[0].lat;
@@ -355,7 +390,7 @@ export class SimulationEngine {
       );
 
       // Transition ASSIGNED → EN_ROUTE once the ambulance starts moving
-      if (dispatch.status === 'ASSIGNED' && state.routeIndex > 0) {
+      if (dispatch.status === 'ASSIGNED' && state.hasMoved) {
         await prisma.$transaction([
           prisma.dispatch.update({ where: { id: dispatch.id }, data: { status: 'EN_ROUTE' } }),
           prisma.ambulance.update({ where: { id: dispatch.ambulanceId }, data: { status: 'EN_ROUTE' } }),
@@ -366,6 +401,10 @@ export class SimulationEngine {
           ambulanceId: dispatch.ambulanceId,
           status: 'EN_ROUTE',
           assignedEmergencyId: dispatch.emergencyId,
+        });
+        this.io.emit(SocketEvents.DISPATCH_STATUS_UPDATE, {
+          dispatchId: dispatch.id,
+          status: 'EN_ROUTE',
         });
         this.io.emit(SocketEvents.EMERGENCY_STATUS_UPDATE, {
           emergencyId: dispatch.emergencyId,
@@ -436,6 +475,10 @@ export class SimulationEngine {
           ambulanceId: dispatch.ambulanceId,
           status: 'ON_SCENE',
           assignedEmergencyId: dispatch.emergencyId,
+        });
+        this.io.emit(SocketEvents.DISPATCH_STATUS_UPDATE, {
+          dispatchId: dispatch.id,
+          status: 'ON_SCENE',
         });
         // Also broadcast the snapped position so the marker moves to the exact pin
         this.io.emit(SocketEvents.AMBULANCE_LOCATION_UPDATE, {

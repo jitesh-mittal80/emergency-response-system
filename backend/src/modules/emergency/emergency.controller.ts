@@ -60,7 +60,6 @@ export async function simulateEmergency(req: AuthRequest, res: Response, next: N
       data: {
         patientId: patient.id,
         emergencyType: patient.emergencyType,
-        priority: patient.emergencyPriority,
         latitude: patient.latitude,
         longitude: patient.longitude,
         status: 'PENDING',

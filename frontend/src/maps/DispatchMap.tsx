@@ -48,12 +48,8 @@ function createAmbulanceIcon(status: string): L.DivIcon {
   });
 }
 
-function createEmergencyIcon(priority: string): L.DivIcon {
-  const color =
-    priority === 'CRITICAL' ? '#EF4444' :
-    priority === 'HIGH'     ? '#F97316' :
-    priority === 'MEDIUM'   ? '#EAB308' :
-    '#6B7280';
+function createEmergencyIcon(): L.DivIcon {
+  const color = '#EF4444';
 
   return L.divIcon({
     html: `<div style="
@@ -261,7 +257,7 @@ export default function DispatchMap({
           <Marker
             key={em.id}
             position={[em.latitude, em.longitude]}
-            icon={createEmergencyIcon(em.priority)}
+            icon={createEmergencyIcon()}
           >
             <Popup>
               <div style={{ minWidth: 190, color: '#fff', background: '#1E293B', padding: 4 }}>

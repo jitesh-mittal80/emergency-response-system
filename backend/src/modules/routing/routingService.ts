@@ -15,8 +15,7 @@ export interface RouteResult {
 }
 
 // ── OSRM public demo server — free, no API key, real OSM roads ──────────────
-// Uses car profile (driving). Suitable for academic prototypes.
-// For production, host your own OSRM instance.
+// Uses the car profile (driving).
 const OSRM_BASE = process.env.OSRM_BASE_URL || 'https://router.project-osrm.org';
 const OSRM_ENABLED = process.env.DISABLE_OSRM !== 'true';
 
@@ -92,6 +91,7 @@ async function getOSRMRoute(
   const points: RoutePoint[] = (route.geometry.coordinates as [number, number][]).map(
     ([lng, lat]) => ({ lat, lng })
   );
+  if (points.length < 2) throw new Error('OSRM returned insufficient route geometry');
 
   logger.info(
     `[OSRM] Route: ${distanceKm.toFixed(2)} km, ${durationMinutes.toFixed(1)} min, ${points.length} waypoints`
@@ -136,6 +136,7 @@ async function getGoogleRoute(
   const distanceKm = (route.distanceMeters || 0) / 1000;
   const durationMinutes = parseInt(route.duration?.replace('s', '') || '0', 10) / 60;
   const points = decodePolyline(route.polyline?.encodedPolyline || '');
+  if (points.length < 2) throw new Error('Google returned insufficient route geometry');
 
   return { points, distanceKm, durationMinutes, isMock: false };
 }

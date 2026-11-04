@@ -1,4 +1,4 @@
-import { PrismaClient, AmbulanceStatus, EmergencyType, EmergencyPriority } from '@prisma/client';
+import { PrismaClient, AmbulanceStatus, EmergencyType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -49,7 +49,6 @@ async function main() {
     latitude: number;
     longitude: number;
     emergencyType: EmergencyType;
-    emergencyPriority: EmergencyPriority;
   }> = [
     {
       name: 'Rajesh Kumar',
@@ -58,7 +57,6 @@ async function main() {
       latitude: 28.5921,
       longitude: 77.0460,
       emergencyType: 'CARDIAC_ARREST',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Priya Sharma',
@@ -67,7 +65,6 @@ async function main() {
       latitude: 28.6282,
       longitude: 77.0862,
       emergencyType: 'ACCIDENT',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Amit Singh',
@@ -76,7 +73,6 @@ async function main() {
       latitude: 28.6208,
       longitude: 77.0573,
       emergencyType: 'STROKE',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Sunita Verma',
@@ -85,7 +81,6 @@ async function main() {
       latitude: 28.5897,
       longitude: 77.0793,
       emergencyType: 'MATERNITY',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Vikas Gupta',
@@ -94,7 +89,6 @@ async function main() {
       latitude: 28.6450,
       longitude: 77.0713,
       emergencyType: 'RESPIRATORY',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Meena Joshi',
@@ -103,7 +97,6 @@ async function main() {
       latitude: 28.5805,
       longitude: 77.0590,
       emergencyType: 'BURNS',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Ramesh Yadav',
@@ -112,7 +105,6 @@ async function main() {
       latitude: 28.5753,
       longitude: 77.0460,
       emergencyType: 'TRAUMA',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Kavita Nair',
@@ -121,7 +113,6 @@ async function main() {
       latitude: 28.6330,
       longitude: 77.0820,
       emergencyType: 'POISONING',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Suresh Patel',
@@ -130,7 +121,6 @@ async function main() {
       latitude: 28.6190,
       longitude: 77.0490,
       emergencyType: 'ACCIDENT',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Anita Malhotra',
@@ -139,7 +129,6 @@ async function main() {
       latitude: 28.5810,
       longitude: 77.0710,
       emergencyType: 'CARDIAC_ARREST',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Deepak Chauhan',
@@ -148,7 +137,6 @@ async function main() {
       latitude: 28.6395,
       longitude: 77.0650,
       emergencyType: 'STROKE',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Rekha Tiwari',
@@ -157,7 +145,6 @@ async function main() {
       latitude: 28.5645,
       longitude: 77.0523,
       emergencyType: 'RESPIRATORY',
-      emergencyPriority: 'MEDIUM',
     },
     {
       name: 'Mahesh Agarwal',
@@ -166,7 +153,6 @@ async function main() {
       latitude: 28.6250,
       longitude: 77.0895,
       emergencyType: 'TRAUMA',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Pooja Kapoor',
@@ -175,7 +161,6 @@ async function main() {
       latitude: 28.6120,
       longitude: 77.0620,
       emergencyType: 'OTHER',
-      emergencyPriority: 'LOW',
     },
     {
       name: 'Sanjay Mishra',
@@ -184,7 +169,6 @@ async function main() {
       latitude: 28.6070,
       longitude: 77.0780,
       emergencyType: 'ACCIDENT',
-      emergencyPriority: 'HIGH',
     },
     {
       name: 'Neha Bhatia',
@@ -193,7 +177,6 @@ async function main() {
       latitude: 28.5540,
       longitude: 77.0580,
       emergencyType: 'MATERNITY',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Ravi Pillai',
@@ -202,7 +185,6 @@ async function main() {
       latitude: 28.6410,
       longitude: 77.0990,
       emergencyType: 'CARDIAC_ARREST',
-      emergencyPriority: 'CRITICAL',
     },
     {
       name: 'Seema Rawat',
@@ -211,7 +193,6 @@ async function main() {
       latitude: 28.6480,
       longitude: 77.1040,
       emergencyType: 'BURNS',
-      emergencyPriority: 'MEDIUM',
     },
   ];
 
