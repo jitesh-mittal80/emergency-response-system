@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { prisma } from '../../utils/prisma';
 import { haversineDistance } from '../../utils/haversine';
-import { getMockRoute } from '../routing/routingService';
+import { getRoute } from '../routing/routingService';
 import { SocketEvents } from '../../sockets/socketServer';
 import { logger } from '../../utils/logger';
 
@@ -27,6 +27,8 @@ interface AmbulanceState {
   targetLng?: number;
   /** prevent repeated ON_SCENE fires */
   arrivedAtScene: boolean;
+  /** prevents overlapping road-route requests when a route ends */
+  isRouting?: boolean;
 }
 
 const TICK_MS = parseInt(process.env.SIMULATION_TICK_MS || '3000', 10);
@@ -136,14 +138,20 @@ export class SimulationEngine {
   /**
    * Called when a dispatch is completed — resume free roaming.
    */
-  resumeAmbulance(ambulanceId: string): void {
+  resumeAmbulance(ambulanceId: string, latitude?: number, longitude?: number): void {
     const state = this.states.get(ambulanceId);
-    const lat = state?.lat ?? 28.6;
-    const lng = state?.lng ?? 77.06;
+    const lat = state?.lat ?? latitude ?? 28.6;
+    const lng = state?.lng ?? longitude ?? 77.06;
 
     // Immediately start a new random roam from current position
     this.initRoam(ambulanceId, lat, lng);
     logger.info(`[Sim] Ambulance ${ambulanceId} resumed roaming`);
+  }
+
+  /** Stop emitting movement updates for an ambulance that is taken offline. */
+  stopAmbulance(ambulanceId: string): void {
+    this.states.delete(ambulanceId);
+    logger.info(`[Sim] Ambulance ${ambulanceId} stopped`);
   }
 
   getStatus() {
@@ -273,11 +281,22 @@ export class SimulationEngine {
 
   private async initRoam(ambulanceId: string, lat: number, lng: number): Promise<void> {
     const dest = this.randomPoint();
-    const route = getMockRoute(lat, lng, dest.lat, dest.lng);
+    const route = await getRoute(lat, lng, dest.lat, dest.lng);
+
+    // A straight-line fallback would cut through buildings and parks.  Keep
+    // the ambulance stationary until a drivable route can be obtained instead.
+    if (route.isMock || route.points.length < 2) {
+      logger.warn(`[Sim] No drivable roaming route for ambulance ${ambulanceId}; it will remain stationary`);
+      return;
+    }
+
+    // OSRM/Google may snap the supplied origin to the nearest road.  Start the
+    // state there so every interpolated movement point remains on that route.
+    const origin = route.points[0];
     this.states.set(ambulanceId, {
       id: ambulanceId,
-      lat,
-      lng,
+      lat: origin.lat,
+      lng: origin.lng,
       routePoints: route.points,
       routeIndex: 0,
       isDispatched: false,
@@ -286,12 +305,29 @@ export class SimulationEngine {
   }
 
   private async scheduleNewDestination(ambulanceId: string, lat: number, lng: number): Promise<void> {
-    const dest = this.randomPoint();
-    const route = getMockRoute(lat, lng, dest.lat, dest.lng);
     const state = this.states.get(ambulanceId);
-    if (state) {
+    if (!state || state.isRouting) return;
+
+    state.isRouting = true;
+    try {
+      const dest = this.randomPoint();
+      const route = await getRoute(lat, lng, dest.lat, dest.lng);
+
+      // Do not use the straight-line fallback for idle roaming.  It would make
+      // the marker travel across non-drivable map features.
+      if (route.isMock || route.points.length < 2) {
+        state.routePoints = [];
+        state.routeIndex = 0;
+        logger.warn(`[Sim] No drivable next route for ambulance ${ambulanceId}; it will remain stationary`);
+        return;
+      }
+
+      state.lat = route.points[0].lat;
+      state.lng = route.points[0].lng;
       state.routePoints = route.points;
       state.routeIndex = 0;
+    } finally {
+      state.isRouting = false;
     }
   }
 

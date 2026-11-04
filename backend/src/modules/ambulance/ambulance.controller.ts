@@ -5,6 +5,8 @@ import { prisma } from '../../utils/prisma';
 import { AuthRequest } from '../../middleware/auth';
 import { createError } from '../../middleware/errorHandler';
 import { getIO, SocketEvents } from '../../sockets/socketServer';
+import { processWaitingEmergencyQueue } from '../dispatch/dispatchEngine';
+import { SimulationEngine } from '../simulation/simulationEngine';
 
 const createSchema = z.object({
   name: z.string().min(2),
@@ -97,6 +99,31 @@ export async function updateAmbulanceStatus(req: AuthRequest, res: Response, nex
       status: ambulance.status,
       assignedEmergencyId: ambulance.assignedEmergencyId,
     });
+
+    const sim = SimulationEngine.getInstance(getIO());
+    if (ambulance.status === 'OFFLINE') {
+      sim.stopAmbulance(ambulance.id);
+      res.json({ ambulance });
+      return;
+    }
+
+    if (ambulance.status === 'AVAILABLE') {
+      await processWaitingEmergencyQueue();
+
+      // The queued emergency may have immediately claimed this ambulance.
+      const currentAmbulance = await prisma.ambulance.findUnique({
+        where: { id: ambulance.id },
+      });
+      if (currentAmbulance?.status === 'AVAILABLE') {
+        sim.resumeAmbulance(
+          currentAmbulance.id,
+          currentAmbulance.latitude,
+          currentAmbulance.longitude
+        );
+      }
+      res.json({ ambulance: currentAmbulance ?? ambulance });
+      return;
+    }
 
     res.json({ ambulance });
   } catch (err) {

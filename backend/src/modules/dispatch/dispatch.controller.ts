@@ -5,6 +5,7 @@ import { AuthRequest } from '../../middleware/auth';
 import { createError } from '../../middleware/errorHandler';
 import { getIO, SocketEvents } from '../../sockets/socketServer';
 import { SimulationEngine } from '../simulation/simulationEngine';
+import { processWaitingEmergencyQueue } from './dispatchEngine';
 
 export async function listDispatches(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -78,10 +79,6 @@ export async function completeDispatch(req: AuthRequest, res: Response, next: Ne
       data: { status: 'COMPLETED' },
     });
 
-    // Resume simulation for this ambulance
-    const sim = SimulationEngine.getInstance(getIO());
-    sim.resumeAmbulance(dispatch.ambulanceId);
-
     const io = getIO();
     io.emit(SocketEvents.DISPATCH_COMPLETED, {
       dispatchId: dispatch.id,
@@ -97,6 +94,19 @@ export async function completeDispatch(req: AuthRequest, res: Response, next: Ne
       emergencyId: dispatch.emergencyId,
       status: 'COMPLETED',
     });
+
+    // Give the oldest waiting emergency the newly available ambulance before
+    // returning it to free roaming.
+    await processWaitingEmergencyQueue();
+
+    const currentAmbulance = await prisma.ambulance.findUnique({
+      where: { id: dispatch.ambulanceId },
+      select: { status: true },
+    });
+    if (currentAmbulance?.status === 'AVAILABLE') {
+      const sim = SimulationEngine.getInstance(io);
+      sim.resumeAmbulance(dispatch.ambulanceId);
+    }
 
     res.json({ message: 'Dispatch completed', dispatch: updatedDispatch });
   } catch (err) {

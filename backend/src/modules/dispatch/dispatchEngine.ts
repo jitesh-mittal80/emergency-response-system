@@ -21,6 +21,55 @@ export interface DispatchResult {
   error?: string;
 }
 
+// Only one queue worker may assign waiting emergencies at a time. This keeps
+// requests in creation order even when several ambulances become available
+// close together.
+let waitingQueuePromise: Promise<void> | null = null;
+
+/**
+ * Assign waiting emergencies in first-come-first-served order while an
+ * ambulance is available. The closest suitable ambulance is still selected
+ * for each individual emergency by dispatchAmbulance.
+ */
+export function processWaitingEmergencyQueue(): Promise<void> {
+  if (waitingQueuePromise) return waitingQueuePromise;
+
+  const processQueue = async (): Promise<void> => {
+    while (true) {
+      const availableCount = await prisma.ambulance.count({
+        where: { status: 'AVAILABLE' },
+      });
+      if (availableCount === 0) return;
+
+      const nextEmergency = await prisma.emergencyRequest.findFirst({
+        where: { status: 'WAITING_FOR_AMBULANCE' },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (!nextEmergency) return;
+
+      const result = await dispatchAmbulance(nextEmergency.id);
+      if (!result.success || !result.dispatchId) {
+        // Stop rather than repeatedly retrying an emergency that cannot be
+        // routed at the moment; it remains first in the waiting queue.
+        logger.warn(`[Dispatch] Could not assign waiting emergency ${nextEmergency.id}: ${result.error}`);
+        return;
+      }
+
+      await emitDispatchEvents(result.dispatchId);
+    }
+  };
+
+  const processing = processQueue();
+  waitingQueuePromise = processing;
+  const releaseQueue = () => {
+    if (waitingQueuePromise === processing) waitingQueuePromise = null;
+  };
+  void processing.then(releaseQueue, releaseQueue);
+
+  return processing;
+}
+
 /**
  * Core dispatch engine.
  * 1. Fetch all AVAILABLE ambulances at their latest tracked positions.
